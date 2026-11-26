@@ -1,0 +1,95 @@
+{
+  "dataset": {
+    "rows": 10000,
+    "churned": 2037,
+    "churn_rate": 0.2037,
+    "train": 8000,
+    "test": 2000
+  },
+  "feature_set": "core",
+  "features_used": [
+    "Age",
+    "Balance",
+    "NumOfProducts",
+    "IsActiveMember",
+    "Geography",
+    "Gender"
+  ],
+  "best_params": {
+    "n_neighbors": 45,
+    "p": 2,
+    "weights": "uniform"
+  },
+  "feature_set_cv_auc": {
+    "all": 0.837,
+    "no_salary_tenure": 0.8444,
+    "core": 0.8508
+  },
+  "threshold": 0.29,
+  "baseline_accuracy_majority_class": 0.7965,
+  "test_at_threshold": {
+    "accuracy": 0.8415,
+    "precision": 0.6004,
+    "recall": 0.6609,
+    "f1": 0.6292,
+    "roc_auc": 0.8615,
+    "pr_auc": 0.6816
+  },
+  "test_at_0.5": {
+    "accuracy": 0.8605,
+    "precision": 0.7936,
+    "recall": 0.4251,
+    "f1": 0.5536
+  },
+  "confusion_matrix": [
+    [
+      1414,
+      179
+    ],
+    [
+      138,
+      269
+    ]
+  ],
+  "repeated_cv": {
+    "roc_auc": {
+      "mean": 0.8564,
+      "std": 0.0098
+    },
+    "pr_auc": {
+      "mean": 0.6719,
+      "std": 0.0176
+    }
+  },
+  "benchmark_test": {
+    "KNN (tuned)": {
+      "roc_auc": 0.8615,
+      "pr_auc": 0.6816
+    },
+    "Logistic Regression": {
+      "roc_auc": 0.7748,
+      "pr_auc": 0.4789
+    },
+    "Random Forest": {
+      "roc_auc": 0.8567,
+      "pr_auc": 0.689
+    }
+  },
+  "k_curve_cv_auc": {
+    "15": 0.8407,
+    "25": 0.8475,
+    "35": 0.85,
+    "45": 0.8508,
+    "55": 0.8501,
+    "75": 0.8492,
+    "101": 0.848
+  },
+  "permutation_importance": {
+    "NumOfProducts": 0.1406,
+    "Age": 0.1056,
+    "Balance": 0.0432,
+    "IsActiveMember": 0.0335,
+    "Geography": 0.0283,
+    "Gender": 0.011
+  }
+}

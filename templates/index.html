@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bank Customer Classifier (KNN)</title>
+<style>
+  :root{--bg:#eff2f8;--card:#fff;--text:#1d2433;--muted:#6b7280;--accent:#4338ca;--border:#e2e6ee;--low:#16a34a;--mod:#d97706;--high:#dc2626}
+  @media (prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b23;--text:#e8eaf0;--muted:#9aa1b2;--border:#2a303c}}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  main{max-width:980px;margin:0 auto;padding:30px 18px}
+  h1{margin:0 0 4px;font-size:1.8rem} .sub{color:var(--muted);margin:0 0 20px}
+  .grid{display:grid;grid-template-columns:5fr 6fr;gap:18px} @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+  label{display:block;font-size:.85rem;font-weight:600;margin-top:12px} label span{color:var(--muted);font-weight:400}
+  input,select{width:100%;margin-top:4px;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text);font:inherit}
+  select option{color:#000} input:focus,select:focus{outline:2px solid var(--accent)}
+  .row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  button{padding:10px 18px;border:0;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+  .primary{background:var(--accent);color:#fff} .ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  .big{font-size:3rem;font-weight:800;line-height:1} .badge{display:inline-block;padding:4px 14px;border-radius:99px;color:#fff;font-weight:700;margin-left:10px;vertical-align:middle}
+  .Low{background:var(--low)} .Elevated{background:var(--mod)} .High{background:var(--high)}
+  .meter{position:relative;height:14px;border-radius:99px;background:linear-gradient(90deg,var(--low),var(--mod),var(--high));margin:18px 0 6px}
+  .pin{position:absolute;top:-5px;width:4px;height:24px;background:var(--text);border-radius:2px;transform:translateX(-2px)}
+  .thr{position:absolute;top:-2px;width:0;height:18px;border-left:2px dashed var(--text);opacity:.7}
+  .legend{font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between}
+  .votes{display:flex;height:22px;border-radius:7px;overflow:hidden;margin:8px 0;font-size:.75rem;color:#fff;font-weight:700}
+  .votes div{display:flex;align-items:center;justify-content:center;min-width:0} .stay{background:var(--low)} .left{background:var(--high)}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:8px} th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--border)} th{color:var(--muted);font-weight:600}
+  .warn,.err{margin-top:12px;font-size:.85rem;padding:8px 12px;border-radius:8px} .warn{background:#fef3c7;color:#92400e} .err{background:#fee2e2;color:#991b1b}
+  .muted{color:var(--muted);font-size:.8rem} #out{display:none} h3{margin:18px 0 0;font-size:.95rem}
+  .disc{margin-top:18px;padding:12px 16px;border-radius:10px;border:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body><main>
+  <h1>🏦 Bank Customer Classifier</h1>
+  <p class="sub">K-Nearest Neighbours model that predicts whether a customer is likely to leave the bank - and shows the similar customers behind the answer.</p>
+  <div class="grid">
+    <form id="f" class="card" autocomplete="off">
+      <strong>Customer details</strong>
+      <div id="fields"></div>
+      <div class="row">
+        <button class="primary" type="submit">Classify customer</button>
+        <button class="ghost" type="button" id="exHigh">Example: at risk</button>
+        <button class="ghost" type="button" id="exLow">Example: loyal</button>
+      </div>
+      <div class="err" id="err" style="display:none"></div>
+    </form>
+    <div>
+      <div class="card" id="placeholder"><strong>Result</strong><p class="muted">Fill in the details and press <em>Classify customer</em>.</p></div>
+      <div class="card" id="out">
+        <strong>Churn risk</strong>
+        <div style="margin-top:10px"><span class="big" id="pct"></span><span class="badge" id="lvl"></span></div>
+        <div class="meter"><div class="thr" id="thr"></div><div class="pin" id="pin"></div></div>
+        <div class="legend"><span>0%</span><span id="thrLabel"></span><span>100%</span></div>
+        <p id="verdict" style="margin:12px 0 0"></p>
+        <h3>Why? The <span id="kk"></span> most similar customers</h3>
+        <div class="votes"><div class="stay" id="vStay"></div><div class="left" id="vLeft"></div></div>
+        <div class="muted" id="voteTxt"></div>
+        <div style="overflow-x:auto"><table id="tbl"></table></div>
+        <div id="notes"></div>
+      </div>
+    </div>
+  </div>
+  <div class="disc">⚠️ <b>Educational demo.</b> Trained on a public 10,000-customer teaching dataset; the "similar customers" shown are anonymised dataset records. Predictions are statistical estimates, not decisions - a real bank would need fairness, privacy and regulatory review before using any such model.</div>
+</main>
+<script>
+const $ = id => document.getElementById(id), f = $('f'); let schema = null;
+const mk = (tag, props = {}, text) => Object.assign(document.createElement(tag), props, text !== undefined ? {textContent: text} : {});
+
+async function init() {
+  schema = await (await fetch('/api/schema')).json();
+  schema.fields.forEach(s => {
+    const lab = mk('label', {}, s.label + ' '); if (s.help) lab.appendChild(mk('span', {}, '(' + s.help + ')'));
+    let el;
+    if (s.kind === 'select') {
+      el = mk('select', {name: s.name});
+      s.options.forEach(o => el.appendChild(mk('option', {value: o}, (s.names && s.names[o]) || o)));
+    } else { el = mk('input', {name: s.name, type: 'number', min: s.min, max: s.max, step: s.step, required: true}); }
+    lab.appendChild(el); $('fields').appendChild(lab);
+  });
+}
+const fill = ex => { for (const k in ex) f.elements[k].value = ex[k]; };
+$('exHigh').onclick = () => fill(schema.examples.high); $('exLow').onclick = () => fill(schema.examples.low);
+
+f.onsubmit = async e => {
+  e.preventDefault(); $('err').style.display = 'none';
+  const body = {}; new FormData(f).forEach((v, k) => body[k] = v);
+  try {
+    const r = await fetch('/api/predict', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    const d = await r.json();
+    if (!r.ok) { $('err').textContent = (d.errors || ['Request failed']).join(' '); $('err').style.display = 'block'; return; }
+    show(d);
+  } catch (x) { $('err').textContent = 'Could not reach the server.'; $('err').style.display = 'block'; }
+};
+
+function show(d) {
+  $('placeholder').style.display = 'none'; $('out').style.display = 'block';
+  $('pct').textContent = d.probability + '%'; $('lvl').textContent = d.risk_level + ' risk'; $('lvl').className = 'badge ' + d.risk_level;
+  $('pin').style.left = d.probability + '%'; $('thr').style.left = d.threshold + '%'; $('thrLabel').textContent = 'alert threshold ' + d.threshold + '%';
+  $('verdict').textContent = d.flagged ? 'This customer looks like those who tend to leave - a candidate for a retention offer or a check-in call.'
+                                       : 'This customer looks like those who tend to stay.';
+  $('kk').textContent = d.neighbors_total;
+  const L = d.neighbors_churned, S = d.neighbors_total - L;
+  $('vStay').style.width = (S / d.neighbors_total * 100) + '%'; $('vStay').textContent = S ? 'Stayed ' + S : '';
+  $('vLeft').style.width = (L / d.neighbors_total * 100) + '%'; $('vLeft').textContent = L ? 'Left ' + L : '';
+  $('voteTxt').textContent = L + ' of ' + d.neighbors_total + ' customers with the most similar profile left the bank. Closest matches:';
+  const cols = d.used_features.concat(['outcome']), t = $('tbl'); t.innerHTML = '';
+  const hr = mk('tr'); cols.forEach(c => hr.appendChild(mk('th', {}, c))); t.appendChild(hr);
+  d.closest.forEach(c => { const tr = mk('tr'); cols.forEach(k => tr.appendChild(mk('td', {}, typeof c[k] === 'number' && !Number.isInteger(c[k]) ? c[k].toFixed(0) : c[k]))); t.appendChild(tr); });
+  $('notes').innerHTML = ''; d.warnings.forEach(w => $('notes').appendChild(mk('div', {className: 'warn'}, '⚠️ ' + w)));
+}
+init();
+</script></body></html>

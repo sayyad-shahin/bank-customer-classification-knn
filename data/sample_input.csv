@@ -1,0 +1,8 @@
+CreditScore,Geography,Gender,Age,Tenure,Balance,NumOfProducts,HasCrCard,IsActiveMember,EstimatedSalary
+704,France,Male,39,2,111525.02,1,1,0,199484.96
+641,France,Male,35,5,0.0,2,1,0,93148.93
+555,Germany,Female,46,4,120392.99,1,1,0,177719.88
+474,Germany,Female,34,9,176311.36,1,1,0,160213.27
+610,France,Male,40,0,0.0,2,1,0,62232.6
+630,Atlantis,Female,40,7,0.0,2,1,1,34453.17
+595,France,Male,41,9,0.0,2,1,0,5967.09
